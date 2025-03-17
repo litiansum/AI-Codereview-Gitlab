@@ -20,6 +20,7 @@ class DeepSeekClient(BaseClient):
 
         self.client = OpenAI(api_key=self.api_key, base_url=self.base_url) # DeepSeek supports OpenAI API SDK
         self.default_model = os.getenv("DEEPSEEK_API_MODEL", "deepseek-chat")
+        self.temperature = float(os.getenv("Temperature", 1))
 
     def completions(self,
                     messages: List[Dict[str, str]],
@@ -28,15 +29,17 @@ class DeepSeekClient(BaseClient):
         try:
             model = model or self.default_model
             logger.debug(f"Sending request to DeepSeek API. Model: {model}, Messages: {messages}")
-            
+            temperature = self.temperature
             completion = self.client.chat.completions.create(
                 model=model,
-                messages=messages
+                messages=messages,
+                temperature=temperature,
+                frequency_penalty=0.5
             )
             
             if not completion or not completion.choices:
                 logger.error("Empty response from DeepSeek API")
-                return "AI服务返回为空，请稍后重试"
+                return "AI服务返回为空, 请稍后重试"
                 
             return completion.choices[0].message.content
             
