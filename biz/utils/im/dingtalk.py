@@ -80,6 +80,6 @@ class DingTalkNotifier:
             if response_data.get('errmsg') == 'ok':
                 logger.info(f"钉钉消息发送成功! webhook_url:{post_url}")
             else:
-                logger.error(f"钉钉消息发送失败! webhook_url:{post_url},errmsg:{response_data.get('errmsg')}")
+                logger.error(f"钉钉消息发送失败! webhook_url:{post_url},content:{content},errmsg:{response_data.get('errmsg')}")
         except Exception as e:
             logger.error(f"钉钉消息发送失败! ", e)
