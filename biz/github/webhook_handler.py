@@ -1,10 +1,9 @@
-import json
 import os
 import re
 import time
 
 import requests
-
+import fnmatch
 from biz.utils.log import logger
 
 
@@ -45,7 +44,9 @@ def filter_changes(changes: list):
     filtered_changes = [
         {
             'diff': item.get('diff', ''),
-            'new_path': item['new_path']
+            'new_path': item['new_path'],
+            'additions': item.get('additions', 0),
+            'deletions': item.get('deletions', 0),
         }
         for item in not_deleted_changes
         if any(item.get('new_path', '').endswith(ext) for ext in supported_extensions)
@@ -106,7 +107,9 @@ class PullRequestHandler:
                         change = {
                             'old_path': file.get('filename'),
                             'new_path': file.get('filename'),
-                            'diff': file.get('patch', '')
+                            'diff': file.get('patch', ''),
+                            'additions': file.get('additions', 0),
+                            'deletions': file.get('deletions', 0)
                         }
                         changes.append(change)
                     return changes
@@ -172,6 +175,22 @@ class PullRequestHandler:
         else:
             logger.error(f"Failed to add comment: {response.status_code}")
             logger.error(response.text)
+
+    def target_branch_protected(self) -> bool:
+        url = f"https://api.github.com/repos/{self.repo_full_name}/branches?protected=true"
+        headers = {
+            'Authorization': f'token {self.github_token}',
+            'Accept': 'application/vnd.github.v3+json'
+        }
+
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            data = response.json()
+            target_branch = self.webhook_data['pull_request']['base']['ref']
+            return any(fnmatch.fnmatch(target_branch, item['name']) for item in data)
+        else:
+            logger.warn(f"Failed to get protected branches: {response.status_code}, {response.text}")
+            return False
 
 
 class PushHandler:
@@ -296,7 +315,9 @@ class PushHandler:
                     'old_path': file.get('filename'),
                     'new_path': file.get('filename'),
                     'diff': file.get('patch', ''),
-                    'status': file.get('status', '')
+                    'status': file.get('status', ''),
+                    'additions': file.get('additions', 0),
+                    'deletions': file.get('deletions', 0),
                 }
                 diffs.append(diff)
             return diffs
